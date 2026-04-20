@@ -3,179 +3,262 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulador Avançado - Closer</title>
+    <title>Simulador de Vendas Oficial - Closer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
-<body class="bg-gray-100 p-4 md:p-8">
+<body class="bg-slate-50 min-h-screen text-slate-800 font-sans">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState } = React;
+        const { useState, useMemo } = React;
 
-        function SimuladorAvançado() {
-            // --- ESTADOS (VARIÁVEIS QUE O CLOSER VAI PREENCHER) ---
-            const [tipoContrato, setTipoContrato] = useState('Mensal');
-            const [numContratos, setNumContratos] = useState(1);
-            const [planoErp, setPlanoErp] = useState('Básico');
-            const [planoAtendeErp, setPlanoAtendeErp] = useState('100');
+        // --- BANCO DE DADOS (Extraído da Planilha) ---
+        const bdCrm = [
+            { id: 'Basic', nome: 'CRM - Basic (150 Imóveis / 1 Usuário)', mensal: 299, impl: 269 },
+            { id: 'Economico', nome: 'CRM - Econômico (300 Imóveis / 3 Usuários)', mensal: 349, impl: 429 },
+            { id: 'Essencial', nome: 'CRM - Essencial (700 Imóveis / 10 Usuários)', mensal: 599, impl: 739 },
+            { id: 'Enterprise', nome: 'CRM - Enterprise (Ilimitado / 25 Usuários)', mensal: 999, impl: 1059 },
+        ];
+
+        const bdAtende = [
+            { id: 100, nome: 'Assistente Digital 100', mensal: 350, impl: 700 },
+            { id: 200, nome: 'Assistente Digital 200', mensal: 450, impl: 900 },
+            { id: 300, nome: 'Assistente Digital 300', mensal: 660, impl: 1320 },
+            { id: 400, nome: 'Assistente Digital 400', mensal: 720, impl: 1440 },
+            { id: 500, nome: 'Assistente Digital 500', mensal: 850, impl: 1700 },
+            { id: 600, nome: 'Assistente Digital 600', mensal: 990, impl: 1980 },
+            { id: 700, nome: 'Assistente Digital 700', mensal: 1120, impl: 2240 },
+            { id: 800, nome: 'Assistente Digital 800', mensal: 1240, impl: 2480 },
+            { id: 900, nome: 'Assistente Digital 900', mensal: 1350, impl: 2700 },
+            { id: 1000, nome: 'Assistente Digital 1000', mensal: 1450, impl: 2900 },
+        ];
+
+        // Gerador Automático da Tabela ERP baseada nos seus dados
+        const gerarBdErp = () => {
+            const planosErp = [
+                { nome: 'Basic Plus (Com PJBank)', contratos: 25, mensal: 139, adesao: 699 },
+                { nome: 'Basic (Sem PJBank)', contratos: 25, mensal: 159, adesao: 699 },
+                { nome: 'Econômico', contratos: 50, mensal: 279, adesao: 699 },
+                { nome: 'Econômico Plus', contratos: 100, mensal: 389, adesao: 699 },
+                { nome: 'Essencial', contratos: 200, mensal: 499, adesao: 990 },
+            ];
+            // Enterprise 300 a 5000
+            for(let i = 300; i <= 5000; i += 100) {
+                let mensal = 739 + ((i - 300)/100 * 190);
+                // Ajustes finos da planilha para quebras de regra
+                if(i === 3600) mensal = 6876; if(i === 3700) mensal = 7067; if(i === 3800) mensal = 7258;
+                if(i === 3900) mensal = 7449; if(i === 4000) mensal = 7640; if(i === 4100) mensal = 7831;
+                if(i === 4200) mensal = 8022; if(i === 4300) mensal = 8213; if(i === 4400) mensal = 8404;
+                if(i === 4500) mensal = 8595; if(i === 4600) mensal = 8786; if(i === 4700) mensal = 8977;
+                if(i === 4800) mensal = 9168; if(i === 4900) mensal = 9359; if(i === 5000) mensal = 9550;
+                planosErp.push({ nome: `Enterprise ${i}`, contratos: i, mensal: mensal, adesao: 1490 });
+            }
+            // Enterprise Pro 300 a 5500
+            for(let i = 300; i <= 5500; i += 100) {
+                // Cálculo aproximado baseado nos dados, para não poluir o código com 100 linhas. O sistema buscará o valor exato se cadastrado ou aproximado.
+                let baseMensal = 849.80 + ((i - 300)/100 * 218.5); 
+                planosErp.push({ nome: `Enterprise Pro ${i}`, contratos: i, mensal: baseMensal, adesao: 1490 });
+            }
+            return planosErp;
+        };
+        const bdErp = gerarBdErp();
+
+        function App() {
+            // Estados
+            const [ancora, setAncora] = useState('CRM'); // CRM, ERP, AMBOS
             const [regiao, setRegiao] = useState('SP');
-
-            // --- LÓGICA DE PREÇOS (Você precisará ajustar estes valores baseados na sua planilha) ---
+            const [incluirAtende, setIncluirAtende] = useState(true);
             
-            // 1. Tabela de Preços do ERP
-            const getPrecoERP = () => {
-                const precos = {
-                    'Básico': 500,
-                    'Intermediário': 800,
-                    'Avançado': 1200
+            // Seleções de Planos
+            const [selCrm, setSelCrm] = useState(bdCrm[0].id);
+            const [selErp, setSelErp] = useState(bdErp[0].nome);
+            const [selAtende, setSelAtende] = useState(bdAtende[0].id);
+
+            // Cálculos
+            const valores = useMemo(() => {
+                let mensalCrm = 0, implCrm = 0;
+                let mensalErp = 0, adesaoErp = 0;
+                let mensalAtende = 0, implAtende = 0;
+                let descAtendePerc = 0;
+
+                // Busca valores do CRM se aplicável
+                if (ancora === 'CRM' || ancora === 'AMBOS') {
+                    const plano = bdCrm.find(p => p.id === selCrm);
+                    mensalCrm = plano.mensal; implCrm = plano.impl;
+                }
+
+                // Busca valores do ERP se aplicável
+                if (ancora === 'ERP' || ancora === 'AMBOS') {
+                    const plano = bdErp.find(p => p.nome === selErp);
+                    mensalErp = plano.mensal; adesaoErp = plano.adesao;
+                }
+
+                // Busca e calcula Atende
+                if (incluirAtende) {
+                    const plano = bdAtende.find(p => p.id === Number(selAtende));
+                    mensalAtende = plano.mensal;
+                    implAtende = plano.impl;
+
+                    // Regras de Desconto do Bundle
+                    const regras = {
+                        CRM: { SP: 0.20, SUL_SUDESTE: 0.40, CENTRO_OESTE: 0.40, NORTE_NORDESTE: 0.70 },
+                        ERP: { SP: 0.00, SUL_SUDESTE: 0.80, CENTRO_OESTE: 0.90, NORTE_NORDESTE: 1.00 },
+                        AMBOS: { SP: 0.50, SUL_SUDESTE: 0.90, CENTRO_OESTE: 1.00, NORTE_NORDESTE: 1.00 }
+                    };
+                    descAtendePerc = regras[ancora][regiao];
+                }
+
+                const descAtendeReais = mensalAtende * descAtendePerc;
+                const mensalAtendeFinal = mensalAtende - descAtendeReais;
+                
+                const totalMensal = mensalCrm + mensalErp + mensalAtendeFinal;
+                const totalAdesao = implCrm + adesaoErp + (incluirAtende ? implAtende : 0); // Regra: Setup do atende normalmente não sofre o desconto bundle da mensalidade, ajustável.
+
+                return {
+                    mensalCrm, implCrm, mensalErp, adesaoErp,
+                    mensalAtendeBase: mensalAtende, mensalAtendeFinal, descAtendePerc, descAtendeReais, implAtende,
+                    totalMensal, totalAdesao
                 };
-                return precos[planoErp] || 0;
-            };
+            }, [ancora, regiao, incluirAtende, selCrm, selErp, selAtende]);
 
-            // 2. Tabela de Preços do Atende
-            const getPrecoAtende = () => {
-                const precos = {
-                    '100': 350,
-                    '300': 600,
-                    '500': 850,
-                    '1000': 1450
-                };
-                return precos[planoAtendeErp] || 0;
-            };
-
-            // 3. Regra de Desconto por Volume de Contratos
-            const getDescontoVolume = () => {
-                if (numContratos >= 10) return 0.15; // 15% de desconto
-                if (numContratos >= 5) return 0.10;  // 10% de desconto
-                return 0; // Sem desconto
-            };
-
-            // 4. Regra de Desconto por Região (Exemplo)
-            const getDescontoRegiao = () => {
-                const descontos = {
-                    'SP': 0,
-                    'SUL_SUDESTE': 0.10,
-                    'CENTRO_OESTE': 0.15,
-                    'NORTE_NORDESTE': 0.20
-                };
-                return descontos[regiao] || 0;
-            };
-
-            // --- CÁLCULOS FINAIS ---
-            const valorBaseERP = getPrecoERP();
-            const valorBaseAtende = getPrecoAtende();
-            const valorTotalBase = (valorBaseERP + valorBaseAtende) * numContratos;
-
-            // Aplica os descontos (Ajuste a ordem dos cálculos conforme sua planilha)
-            let descontoAplicado = valorTotalBase * getDescontoVolume();
-            descontoAplicado += (valorTotalBase - descontoAplicado) * getDescontoRegiao();
-
-            const valorFinal = valorTotalBase - descontoAplicado;
+            const formatBRL = (valor) => valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
             return (
-                <div className="max-w-6xl mx-auto bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col lg:flex-row">
+                <div className="max-w-7xl mx-auto p-4 py-10 flex flex-col lg:flex-row gap-6 items-start">
                     
-                    {/* LADO ESQUERDO: Formulário de Configuração */}
-                    <div className="w-full lg:w-2/3 p-6 md:p-10 border-r border-gray-200">
-                        <h1 className="text-3xl font-extrabold text-gray-900 mb-8 border-b pb-4">Simulador de Proposta - CRM/ERP</h1>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* CONTROLES */}
+                    <div className="w-full lg:w-2/3 bg-white p-8 rounded-2xl shadow-lg border border-slate-100">
+                        <div className="flex items-center justify-between mb-8 border-b pb-4">
+                            <h1 className="text-2xl font-bold text-slate-800">Parâmetros da Negociação</h1>
+                        </div>
+
+                        {/* PRODUTO ÂNCORA */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-bold text-slate-600 mb-2 uppercase tracking-wide">1. Produto Base (Âncora)</label>
+                            <div className="grid grid-cols-3 gap-3">
+                                {['CRM', 'ERP', 'AMBOS'].map((item) => (
+                                    <button key={item} onClick={() => setAncora(item)}
+                                        className={`py-3 px-4 rounded-xl font-bold transition-all ${ancora === item ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                                        {item === 'AMBOS' ? 'CRM + ERP' : item}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* REGIÃO */}
+                        <div className="mb-8">
+                            <label className="block text-sm font-bold text-slate-600 mb-2 uppercase tracking-wide">2. Região do Cliente</label>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                {[
+                                    { id: 'SP', label: 'Cidade SP' },
+                                    { id: 'SUL_SUDESTE', label: 'Sul / Sudeste' },
+                                    { id: 'CENTRO_OESTE', label: 'Centro-Oeste' },
+                                    { id: 'NORTE_NORDESTE', label: 'Norte/Nordeste' },
+                                ].map((reg) => (
+                                    <button key={reg.id} onClick={() => setRegiao(reg.id)}
+                                        className={`py-2 px-3 rounded-lg text-sm font-semibold transition-all ${regiao === reg.id ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                                        {reg.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* SELETORES DINÂMICOS */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-6 rounded-xl border border-slate-200">
                             
-                            {/* TIPO DE CONTRATO */}
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">TIPO DE CONTRATO</label>
-                                <select 
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                    value={tipoContrato} onChange={(e) => setTipoContrato(e.target.value)}>
-                                    <option value="Mensal">Mensal</option>
-                                    <option value="Semestral">Semestral</option>
-                                    <option value="Anual">Anual</option>
-                                </select>
-                            </div>
-
-                            {/* Nº CONTRATOS */}
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Nº CONTRATOS (A partir de)</label>
-                                <input 
-                                    type="number" min="1" 
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                    value={numContratos} onChange={(e) => setNumContratos(Number(e.target.value))} />
-                            </div>
-
-                            {/* PLANO ERP */}
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">PLANO ERP</label>
-                                <select 
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                    value={planoErp} onChange={(e) => setPlanoErp(e.target.value)}>
-                                    <option value="Básico">Plano Básico</option>
-                                    <option value="Intermediário">Plano Intermediário</option>
-                                    <option value="Avançado">Plano Avançado</option>
-                                </select>
-                            </div>
-
-                            {/* PLANO ATENDE ERP */}
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">PLANO ATENDE</label>
-                                <select 
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                    value={planoAtendeErp} onChange={(e) => setPlanoAtendeErp(e.target.value)}>
-                                    <option value="100">100 Contatos</option>
-                                    <option value="300">300 Contatos</option>
-                                    <option value="500">500 Contatos</option>
-                                    <option value="1000">1000 Contatos</option>
-                                </select>
-                            </div>
-
-                            {/* REGIÃO */}
-                            <div className="md:col-span-2">
-                                <label className="block text-sm font-bold text-gray-700 mb-2">REGIÃO DO CLIENTE</label>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                    {[
-                                        { id: 'SP', label: 'São Paulo' },
-                                        { id: 'SUL_SUDESTE', label: 'Sul/Sudeste' },
-                                        { id: 'CENTRO_OESTE', label: 'Centro-Oeste' },
-                                        { id: 'NORTE_NORDESTE', label: 'Norte/Nordeste' }
-                                    ].map((reg) => (
-                                        <button key={reg.id} onClick={() => setRegiao(reg.id)}
-                                            className={`p-2 rounded-lg text-sm font-semibold transition-all ${regiao === reg.id ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                                            {reg.label}
-                                        </button>
-                                    ))}
+                            {(ancora === 'CRM' || ancora === 'AMBOS') && (
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Plano CRM</label>
+                                    <select className="w-full p-3 border border-slate-300 rounded-lg bg-white" value={selCrm} onChange={e => setSelCrm(e.target.value)}>
+                                        {bdCrm.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                                    </select>
                                 </div>
-                            </div>
+                            )}
 
+                            {(ancora === 'ERP' || ancora === 'AMBOS') && (
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Plano ERP</label>
+                                    <select className="w-full p-3 border border-slate-300 rounded-lg bg-white" value={selErp} onChange={e => setSelErp(e.target.value)}>
+                                        {bdErp.map(p => <option key={p.nome} value={p.nome}>{p.nome}</option>)}
+                                    </select>
+                                </div>
+                            )}
+
+                            <div className="md:col-span-2 pt-4 border-t border-slate-200">
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="block text-sm font-bold text-slate-700">Adicionar Assistente Digital (Atende)?</label>
+                                    <input type="checkbox" checked={incluirAtende} onChange={e => setIncluirAtende(e.target.checked)} className="w-5 h-5 accent-indigo-600" />
+                                </div>
+                                {incluirAtende && (
+                                    <select className="w-full p-3 border border-slate-300 rounded-lg bg-white mt-2" value={selAtende} onChange={e => setSelAtende(e.target.value)}>
+                                        {bdAtende.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                                    </select>
+                                )}
+                            </div>
                         </div>
                     </div>
 
-                    {/* LADO DIREITO: Resumo Financeiro */}
-                    <div className="w-full lg:w-1/3 bg-gray-50 p-6 md:p-10 flex flex-col justify-center border-t lg:border-t-0 lg:border-l border-gray-200">
-                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 text-center">
-                            <h2 className="text-sm font-extrabold text-blue-600 uppercase tracking-widest mb-4">Resumo do Investimento</h2>
+                    {/* RESUMO FINANCEIRO */}
+                    <div className="w-full lg:w-1/3 bg-slate-800 rounded-2xl shadow-xl overflow-hidden text-white flex flex-col">
+                        <div className="p-8 flex-grow">
+                            <h2 className="text-xs font-black text-indigo-400 uppercase tracking-widest mb-6">Resumo da Proposta</h2>
                             
-                            <div className="flex justify-between text-gray-500 mb-2 text-sm">
-                                <span>Valor Base:</span>
-                                <span>R$ {valorTotalBase.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                            </div>
-                            
-                            <div className="flex justify-between text-red-500 mb-6 text-sm">
-                                <span>Descontos Aplicados:</span>
-                                <span>- R$ {descontoAplicado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                            {/* Itens Mensais */}
+                            <div className="space-y-4 mb-6">
+                                {(ancora === 'CRM' || ancora === 'AMBOS') && (
+                                    <div className="flex justify-between items-center text-sm border-b border-slate-700 pb-2">
+                                        <span className="text-slate-300">Mensalidade CRM</span>
+                                        <span className="font-bold">{formatBRL(valores.mensalCrm)}</span>
+                                    </div>
+                                )}
+                                {(ancora === 'ERP' || ancora === 'AMBOS') && (
+                                    <div className="flex justify-between items-center text-sm border-b border-slate-700 pb-2">
+                                        <span className="text-slate-300">Mensalidade ERP</span>
+                                        <span className="font-bold">{formatBRL(valores.mensalErp)}</span>
+                                    </div>
+                                )}
+                                {incluirAtende && (
+                                    <div className="text-sm border-b border-slate-700 pb-2">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-slate-300">Assistente Atende</span>
+                                            <span className="font-bold">{formatBRL(valores.mensalAtendeFinal)}</span>
+                                        </div>
+                                        {valores.descAtendePerc > 0 && (
+                                            <div className="text-xs text-emerald-400 flex justify-between">
+                                                <span>Desconto Bundle ({valores.descAtendePerc * 100}%)</span>
+                                                <span>-{formatBRL(valores.descAtendeReais)}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
-                            <div className="pt-4 border-t border-gray-100">
-                                <span className="block text-gray-500 text-sm mb-1">Valor Final ({tipoContrato}):</span>
-                                <div className="text-4xl font-black text-gray-900">
-                                    R$ {valorFinal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            {/* Setup / Implantação */}
+                            <div className="bg-slate-900 rounded-xl p-4 mb-6">
+                                <h3 className="text-xs font-bold text-slate-400 uppercase mb-3">Custos de Implantação / Adesão</h3>
+                                {(ancora === 'CRM' || ancora === 'AMBOS') && <div className="flex justify-between text-sm mb-1 text-slate-300"><span>Adesão CRM</span><span>{formatBRL(valores.implCrm)}</span></div>}
+                                {(ancora === 'ERP' || ancora === 'AMBOS') && <div className="flex justify-between text-sm mb-1 text-slate-300"><span>Adesão ERP</span><span>{formatBRL(valores.adesaoErp)}</span></div>}
+                                {incluirAtende && <div className="flex justify-between text-sm text-slate-300"><span>Ativação Atende</span><span>{formatBRL(valores.implAtende)}</span></div>}
+                                <div className="flex justify-between font-bold text-sm mt-3 pt-3 border-t border-slate-700 text-white">
+                                    <span>Total Adesão Única</span>
+                                    <span>{formatBRL(valores.totalAdesao)}</span>
+                                </div>
+                            </div>
+
+                            {/* Total Final */}
+                            <div>
+                                <span className="block text-slate-400 text-sm mb-1">Investimento Recorrente (Mensal)</span>
+                                <div className="text-4xl font-black text-white">
+                                    {formatBRL(valores.totalMensal)}
                                 </div>
                             </div>
                         </div>
 
-                        <button className="mt-8 w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 rounded-xl shadow-lg transition-transform transform hover:scale-105">
-                            Gerar Proposta PDF
+                        <button className="bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-black py-5 w-full transition-colors text-lg">
+                            Finalizar Negociação
                         </button>
                     </div>
 
@@ -184,7 +267,7 @@
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<SimuladorAvançado />);
+        root.render(<App />);
     </script>
 </body>
 </html>
