@@ -59,7 +59,7 @@
 
         function App() {
             // Estados Principais
-            const [ancora, setAncora] = useState('CRM');
+            const [ancora, setAncora] = useState('AMBOS');
             const [regiao, setRegiao] = useState('SP');
             const [incluirAtende, setIncluirAtende] = useState(true);
             
@@ -68,25 +68,29 @@
             const [selErp, setSelErp] = useState(bdErp[0].nome);
             const [selAtende, setSelAtende] = useState(bdAtende[0].id);
 
-            // Condições de Fechamento (NOVAS VARIÁVEIS DA PLANILHA)
-            const [ciclo, setCiclo] = useState('Mensal'); // Mensal ou Anual
-            const [descAdesao, setDescAdesao] = useState(0); // 0, 0.30, 0.50, 1.0
+            // Condições de Fechamento
+            const [ciclo, setCiclo] = useState('Mensal');
+            const [descAdesao, setDescAdesao] = useState(0); 
+            const [promoCrm, setPromoCrm] = useState('0_MESES'); // Lógica nova de Ramp-up
 
-            // Lógica e Cálculos
+            // Cálculos
             const valores = useMemo(() => {
                 let mCrm = 0, iCrm = 0, mErp = 0, iErp = 0, mAtende = 0, iAtende = 0;
                 let descBundlePerc = 0;
 
-                if (ancora === 'CRM' || ancora === 'AMBOS') {
-                    const p = bdCrm.find(x => x.id === selCrm);
-                    mCrm = p.mensal; iCrm = p.impl;
-                }
-
+                // Busca ERP
                 if (ancora === 'ERP' || ancora === 'AMBOS') {
                     const p = bdErp.find(x => x.nome === selErp);
                     mErp = p.mensal; iErp = p.adesao;
                 }
 
+                // Busca CRM
+                if (ancora === 'CRM' || ancora === 'AMBOS') {
+                    const p = bdCrm.find(x => x.id === selCrm);
+                    mCrm = p.mensal; iCrm = p.impl;
+                }
+
+                // Busca Atende e aplica desconto de Região/Bundle
                 if (incluirAtende) {
                     const p = bdAtende.find(x => x.id === Number(selAtende));
                     mAtende = p.mensal; iAtende = p.impl;
@@ -98,29 +102,41 @@
                     descBundlePerc = regras[ancora][regiao];
                 }
 
-                // 1. Aplica Desconto Bundle no Atende
-                const descBundleReais = mAtende * descBundlePerc;
-                const mAtendeFinal = mAtende - descBundleReais;
+                const mAtendeFinal = mAtende - (mAtende * descBundlePerc);
                 
-                // 2. Calcula Subtotal Mensal
-                const subtotalMensal = mCrm + mErp + mAtendeFinal;
+                // === LÓGICA NOVA: DESCONTO CRM RAMP-UP ===
+                let mCrmPromocional = mCrm;
+                let infoPromo = '';
+                
+                if (ancora === 'CRM' || ancora === 'AMBOS') {
+                    if (promoCrm === '50_3M') { mCrmPromocional = mCrm * 0.5; infoPromo = '3 meses'; }
+                    else if (promoCrm === '50_6M') { mCrmPromocional = mCrm * 0.5; infoPromo = '6 meses'; }
+                    else if (promoCrm === '50_9M') { mCrmPromocional = mCrm * 0.5; infoPromo = '9 meses'; }
+                    else if (promoCrm === '50_12M') { mCrmPromocional = mCrm * 0.5; infoPromo = '12 meses'; }
+                    else if (promoCrm === '100_ISENCAO') { mCrmPromocional = 0; infoPromo = 'Vitalícia'; }
+                }
 
-                // 3. Aplica Desconto de Ciclo Anual (20% sobre o SaaS, conforme planilha)
+                // Subtotais
+                const subtotalMensalBase = mCrm + mErp + mAtendeFinal; // Valor Cheio
+                const subtotalMensalPromo = mCrmPromocional + mErp + mAtendeFinal; // Valor durante a promoção
+
+                // Desconto Ciclo Anual (Aplica sobre o valor já com a promoção do CRM se houver)
                 const descCicloPerc = ciclo === 'Anual' ? 0.20 : 0;
-                const descCicloReais = subtotalMensal * descCicloPerc;
-                const totalMensalFinal = subtotalMensal - descCicloReais;
+                
+                const totalMensalFinalBase = subtotalMensalBase - (subtotalMensalBase * descCicloPerc); // Valor que ficará depois
+                const totalMensalFinalPromo = subtotalMensalPromo - (subtotalMensalPromo * descCicloPerc); // Valor inicial
 
-                // 4. Calcula Adesão com Desconto
+                // Adesão
                 const totalAdesaoBase = iCrm + iErp + (incluirAtende ? iAtende : 0);
-                const valorDescAdesao = totalAdesaoBase * descAdesao;
-                const totalAdesaoFinal = totalAdesaoBase - valorDescAdesao;
+                const totalAdesaoFinal = totalAdesaoBase - (totalAdesaoBase * descAdesao);
 
                 return {
-                    mCrm, iCrm, mErp, iErp, mAtende, mAtendeFinal, descBundlePerc, descBundleReais,
-                    subtotalMensal, descCicloPerc, descCicloReais, totalMensalFinal,
-                    totalAdesaoBase, descAdesao, valorDescAdesao, totalAdesaoFinal
+                    mCrm, mCrmPromocional, infoPromo, mErp, mAtende, mAtendeFinal, descBundlePerc,
+                    subtotalMensalBase, subtotalMensalPromo, descCicloPerc, 
+                    totalMensalFinalBase, totalMensalFinalPromo,
+                    totalAdesaoBase, descAdesao, totalAdesaoFinal, iCrm, iErp, iAtende
                 };
-            }, [ancora, regiao, incluirAtende, selCrm, selErp, selAtende, ciclo, descAdesao]);
+            }, [ancora, regiao, incluirAtende, selCrm, selErp, selAtende, ciclo, descAdesao, promoCrm]);
 
             const format = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -178,7 +194,7 @@
                             <div className="pt-2 border-t border-slate-200 mt-2">
                                 <div className="flex items-center justify-between mb-2">
                                     <label className="block text-sm font-bold text-slate-700">Incluir Assistente Atende?</label>
-                                    <input type="checkbox" checked={incluirAtende} onChange={e => setIncluirAtende(e.target.checked)} className="w-5 h-5" />
+                                    <input type="checkbox" checked={incluirAtende} onChange={e => setIncluirAtende(e.target.checked)} className="w-5 h-5 accent-blue-600" />
                                 </div>
                                 {incluirAtende && (
                                     <select className="w-full p-2.5 border border-slate-300 rounded-lg" value={selAtende} onChange={e => setSelAtende(e.target.value)}>
@@ -188,31 +204,49 @@
                             </div>
                         </div>
 
-                        {/* CONDIÇÕES DE FECHAMENTO (NOVO) */}
+                        {/* CONDIÇÕES DE FECHAMENTO */}
                         <h2 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
-                            🔥 Condições de Fechamento (Gatilhos)
+                            🔥 Gatilhos Comerciais de Fechamento
                         </h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 bg-amber-50 border border-amber-200 rounded-xl">
-                            <div>
-                                <label className="block text-xs font-bold text-amber-800 mb-2 uppercase tracking-wide">Ciclo de Pagamento</label>
-                                <div className="flex gap-2">
-                                    {['Mensal', 'Anual'].map((c) => (
-                                        <button key={c} onClick={() => setCiclo(c)}
-                                            className={`flex-1 py-2 rounded-lg font-bold border transition-all ${ciclo === c ? 'bg-amber-500 text-white border-amber-600 shadow-md' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}>
-                                            {c} {c === 'Anual' && <span className="block text-[10px] font-normal">-20% OFF</span>}
-                                        </button>
-                                    ))}
+                        <div className="flex flex-col gap-4 p-5 bg-amber-50 border border-amber-200 rounded-xl">
+                            
+                            {/* Gatilho 1: CRM Promocional */}
+                            {(ancora === 'CRM' || ancora === 'AMBOS') && (
+                                <div>
+                                    <label className="block text-xs font-bold text-amber-800 mb-2 uppercase tracking-wide">Desconto CRM (Ramp-up Mensalidade)</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {[{v: '0_MESES', l: 'Sem Promo'}, {v: '50_3M', l: '50% (3 Meses)'}, {v: '50_6M', l: '50% (6 Meses)'}, {v: '50_9M', l: '50% (9 Meses)'}, {v: '50_12M', l: '50% (12 Meses)'}, {v: '100_ISENCAO', l: 'Isenção 100%'}].map((p) => (
+                                            <button key={p.v} onClick={() => setPromoCrm(p.v)}
+                                                className={`flex-1 min-w-[100px] py-2 text-xs rounded-lg font-bold border transition-all ${promoCrm === p.v ? 'bg-amber-500 text-white border-amber-600 shadow-md' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}>
+                                                {p.l}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-amber-800 mb-2 uppercase tracking-wide">Desc. Implantação</label>
-                                <div className="flex gap-1">
-                                    {[{v: 0, l: '0%'}, {v: 0.3, l: '30%'}, {v: 0.5, l: '50%'}, {v: 1, l: 'Isento'}].map((d) => (
-                                        <button key={d.v} onClick={() => setDescAdesao(d.v)}
-                                            className={`flex-1 py-2 text-xs rounded-lg font-bold border transition-all ${descAdesao === d.v ? 'bg-amber-500 text-white border-amber-600 shadow-md' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}>
-                                            {d.l}
-                                        </button>
-                                    ))}
+                            )}
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                                <div>
+                                    <label className="block text-xs font-bold text-amber-800 mb-2 uppercase tracking-wide">Ciclo do Contrato</label>
+                                    <div className="flex gap-2">
+                                        {['Mensal', 'Anual'].map((c) => (
+                                            <button key={c} onClick={() => setCiclo(c)}
+                                                className={`flex-1 py-2 rounded-lg font-bold border transition-all ${ciclo === c ? 'bg-amber-500 text-white border-amber-600 shadow-md' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}>
+                                                {c} {c === 'Anual' && <span className="block text-[10px] font-normal">-20% OFF</span>}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-amber-800 mb-2 uppercase tracking-wide">Desc. Implantação</label>
+                                    <div className="flex gap-1">
+                                        {[{v: 0, l: '0%'}, {v: 0.3, l: '30%'}, {v: 0.5, l: '50%'}, {v: 1, l: 'Isento'}].map((d) => (
+                                            <button key={d.v} onClick={() => setDescAdesao(d.v)}
+                                                className={`flex-1 py-2 text-xs rounded-lg font-bold border transition-all ${descAdesao === d.v ? 'bg-amber-500 text-white border-amber-600 shadow-md' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}>
+                                                {d.l}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -221,9 +255,8 @@
                     {/* RESUMO FINANCEIRO */}
                     <div className="w-full lg:w-1/3 bg-slate-900 rounded-2xl shadow-2xl flex flex-col border border-slate-700 relative overflow-hidden">
                         
-                        {/* Faixa de Anual se ativado */}
                         {ciclo === 'Anual' && (
-                            <div className="bg-amber-500 text-amber-950 text-xs font-black text-center py-1.5 uppercase tracking-widest absolute top-0 w-full left-0">
+                            <div className="bg-amber-500 text-amber-950 text-xs font-black text-center py-1.5 uppercase tracking-widest absolute top-0 w-full left-0 z-10">
                                 ⭐ Plano Anual Ativado (-20%)
                             </div>
                         )}
@@ -233,18 +266,29 @@
                             
                             {/* MENSALIDADE */}
                             <div className="space-y-3 mb-6">
-                                {(ancora === 'CRM' || ancora === 'AMBOS') && (
-                                    <div className="flex justify-between text-sm text-slate-300"><span>Mensalidade CRM</span><span className="font-medium">{format(valores.mCrm)}</span></div>
-                                )}
                                 {(ancora === 'ERP' || ancora === 'AMBOS') && (
                                     <div className="flex justify-between text-sm text-slate-300"><span>Mensalidade ERP</span><span className="font-medium">{format(valores.mErp)}</span></div>
+                                )}
+                                {(ancora === 'CRM' || ancora === 'AMBOS') && (
+                                    <div className="text-sm text-slate-300">
+                                        <div className="flex justify-between mb-1">
+                                            <span>Mensalidade CRM</span>
+                                            <span className={`${valores.promoCrm !== '0_MESES' ? 'line-through text-slate-500' : 'font-medium'}`}>{format(valores.mCrm)}</span>
+                                        </div>
+                                        {valores.infoPromo !== '' && (
+                                            <div className="flex justify-between text-amber-400 text-xs font-bold">
+                                                <span>↳ Desconto Promo ({valores.infoPromo})</span>
+                                                <span>{format(valores.mCrmPromocional)}</span>
+                                            </div>
+                                        )}
+                                    </div>
                                 )}
                                 {incluirAtende && (
                                     <div className="text-sm">
                                         <div className="flex justify-between text-slate-300 mb-1"><span>Assistente Atende</span><span className="font-medium">{format(valores.mAtende)}</span></div>
                                         {valores.descBundlePerc > 0 && (
                                             <div className="flex justify-between text-emerald-400 text-xs font-medium">
-                                                <span>↳ Desconto Bundle ({valores.descBundlePerc * 100}%)</span><span>-{format(valores.descBundleReais)}</span>
+                                                <span>↳ Desconto Bundle ({valores.descBundlePerc * 100}%)</span><span>-{format(valores.mAtende * valores.descBundlePerc)}</span>
                                             </div>
                                         )}
                                     </div>
@@ -253,22 +297,29 @@
 
                             {/* TOTAIS RECORRENTES */}
                             <div className="pt-4 border-t border-slate-700 mb-8">
-                                <div className="flex justify-between items-center mb-1">
-                                    <span className="text-slate-400 text-sm">Subtotal Software</span>
-                                    <span className="text-slate-300 font-bold">{format(valores.subtotalMensal)}</span>
-                                </div>
-                                {ciclo === 'Anual' && (
-                                    <div className="flex justify-between items-center mb-2 text-amber-400 text-sm font-bold">
-                                        <span>Desconto Anual (20%)</span>
-                                        <span>-{format(valores.descCicloReais)}</span>
+                                
+                                {valores.infoPromo !== '' ? (
+                                    // VISÃO COM RAMP-UP
+                                    <div className="bg-slate-800 p-4 rounded-xl border border-slate-600 relative">
+                                        <span className="absolute -top-3 left-3 bg-amber-500 text-amber-950 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">Valor Promocional</span>
+                                        <span className="block text-slate-400 text-xs uppercase tracking-wider mb-1 mt-2">Nos primeiros {valores.infoPromo}</span>
+                                        <div className="text-4xl font-black text-amber-400 mb-2">
+                                            {format(valores.totalMensalFinalPromo)}
+                                        </div>
+                                        <div className="flex justify-between items-center text-xs text-slate-400 border-t border-slate-700 pt-2">
+                                            <span>Mensalidade após promoção:</span>
+                                            <span className="font-bold text-white">{format(valores.totalMensalFinalBase)}</span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    // VISÃO NORMAL
+                                    <div>
+                                        <span className="block text-slate-500 text-xs uppercase tracking-wider mb-1">Investimento Mensal Final</span>
+                                        <div className="text-4xl font-black text-white">
+                                            {format(valores.totalMensalFinalBase)}
+                                        </div>
                                     </div>
                                 )}
-                                <div className="mt-4">
-                                    <span className="block text-slate-500 text-xs uppercase tracking-wider mb-1">Investimento Mensal Final</span>
-                                    <div className="text-4xl font-black text-white">
-                                        {format(valores.totalMensalFinal)}
-                                    </div>
-                                </div>
                             </div>
 
                             {/* ADESÃO */}
@@ -279,7 +330,7 @@
                                 {valores.descAdesao > 0 && (
                                     <div className="flex justify-between text-emerald-400 text-xs font-bold mb-2">
                                         <span>Desconto Aplicado ({valores.descAdesao * 100}%)</span>
-                                        <span>-{format(valores.valorDescAdesao)}</span>
+                                        <span>-{format(valores.totalAdesaoBase * valores.descAdesao)}</span>
                                     </div>
                                 )}
                                 
