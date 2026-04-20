@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulador de Vendas Oficial - Closer</title>
+    <title>Simulador Master - Closer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -15,60 +15,51 @@
     <script type="text/babel">
         const { useState, useMemo } = React;
 
-        // --- BANCO DE DADOS (Extraído da Planilha) ---
+        // --- BANCO DE DADOS ---
         const bdCrm = [
-            { id: 'Basic', nome: 'CRM - Basic (150 Imóveis / 1 Usuário)', mensal: 299, impl: 269 },
-            { id: 'Economico', nome: 'CRM - Econômico (300 Imóveis / 3 Usuários)', mensal: 349, impl: 429 },
-            { id: 'Essencial', nome: 'CRM - Essencial (700 Imóveis / 10 Usuários)', mensal: 599, impl: 739 },
-            { id: 'Enterprise', nome: 'CRM - Enterprise (Ilimitado / 25 Usuários)', mensal: 999, impl: 1059 },
+            { id: 'Basic', nome: 'CRM - Basic (150 Imóveis)', mensal: 299, impl: 269 },
+            { id: 'Economico', nome: 'CRM - Econômico (300 Imóveis)', mensal: 349, impl: 429 },
+            { id: 'Essencial', nome: 'CRM - Essencial (700 Imóveis)', mensal: 599, impl: 739 },
+            { id: 'Enterprise', nome: 'CRM - Enterprise (Ilimitado)', mensal: 999, impl: 1059 },
         ];
 
         const bdAtende = [
-            { id: 100, nome: 'Assistente Digital 100', mensal: 350, impl: 700 },
-            { id: 200, nome: 'Assistente Digital 200', mensal: 450, impl: 900 },
-            { id: 300, nome: 'Assistente Digital 300', mensal: 660, impl: 1320 },
-            { id: 400, nome: 'Assistente Digital 400', mensal: 720, impl: 1440 },
-            { id: 500, nome: 'Assistente Digital 500', mensal: 850, impl: 1700 },
-            { id: 600, nome: 'Assistente Digital 600', mensal: 990, impl: 1980 },
-            { id: 700, nome: 'Assistente Digital 700', mensal: 1120, impl: 2240 },
-            { id: 800, nome: 'Assistente Digital 800', mensal: 1240, impl: 2480 },
-            { id: 900, nome: 'Assistente Digital 900', mensal: 1350, impl: 2700 },
-            { id: 1000, nome: 'Assistente Digital 1000', mensal: 1450, impl: 2900 },
+            { id: 100, nome: 'Assistente 100', mensal: 350, impl: 700 },
+            { id: 200, nome: 'Assistente 200', mensal: 450, impl: 900 },
+            { id: 300, nome: 'Assistente 300', mensal: 660, impl: 1320 },
+            { id: 400, nome: 'Assistente 400', mensal: 720, impl: 1440 },
+            { id: 500, nome: 'Assistente 500', mensal: 850, impl: 1700 },
+            { id: 600, nome: 'Assistente 600', mensal: 990, impl: 1980 },
+            { id: 700, nome: 'Assistente 700', mensal: 1120, impl: 2240 },
+            { id: 800, nome: 'Assistente 800', mensal: 1240, impl: 2480 },
+            { id: 900, nome: 'Assistente 900', mensal: 1350, impl: 2700 },
+            { id: 1000, nome: 'Assistente 1000', mensal: 1450, impl: 2900 },
         ];
 
-        // Gerador Automático da Tabela ERP baseada nos seus dados
         const gerarBdErp = () => {
-            const planosErp = [
-                { nome: 'Basic Plus (Com PJBank)', contratos: 25, mensal: 139, adesao: 699 },
-                { nome: 'Basic (Sem PJBank)', contratos: 25, mensal: 159, adesao: 699 },
-                { nome: 'Econômico', contratos: 50, mensal: 279, adesao: 699 },
-                { nome: 'Econômico Plus', contratos: 100, mensal: 389, adesao: 699 },
-                { nome: 'Essencial', contratos: 200, mensal: 499, adesao: 990 },
+            const planos = [
+                { nome: 'Basic Plus (Com PJBank) - 25', mensal: 139, adesao: 699 },
+                { nome: 'Basic (Sem PJBank) - 25', mensal: 159, adesao: 699 },
+                { nome: 'Econômico - 50', mensal: 279, adesao: 699 },
+                { nome: 'Econômico Plus - 100', mensal: 389, adesao: 699 },
+                { nome: 'Essencial - 200', mensal: 499, adesao: 990 },
             ];
-            // Enterprise 300 a 5000
             for(let i = 300; i <= 5000; i += 100) {
-                let mensal = 739 + ((i - 300)/100 * 190);
-                // Ajustes finos da planilha para quebras de regra
-                if(i === 3600) mensal = 6876; if(i === 3700) mensal = 7067; if(i === 3800) mensal = 7258;
-                if(i === 3900) mensal = 7449; if(i === 4000) mensal = 7640; if(i === 4100) mensal = 7831;
-                if(i === 4200) mensal = 8022; if(i === 4300) mensal = 8213; if(i === 4400) mensal = 8404;
-                if(i === 4500) mensal = 8595; if(i === 4600) mensal = 8786; if(i === 4700) mensal = 8977;
-                if(i === 4800) mensal = 9168; if(i === 4900) mensal = 9359; if(i === 5000) mensal = 9550;
-                planosErp.push({ nome: `Enterprise ${i}`, contratos: i, mensal: mensal, adesao: 1490 });
+                let m = 739 + ((i - 300)/100 * 190);
+                if(i === 3600) m = 6876; if(i === 3700) m = 7067; if(i === 3800) m = 7258;
+                if(i === 3900) m = 7449; if(i === 4000) m = 7640; if(i === 4100) m = 7831;
+                if(i === 4200) m = 8022; if(i === 4300) m = 8213; if(i === 4400) m = 8404;
+                if(i === 4500) m = 8595; if(i === 4600) m = 8786; if(i === 4700) m = 8977;
+                if(i === 4800) m = 9168; if(i === 4900) m = 9359; if(i === 5000) m = 9550;
+                planos.push({ nome: `Enterprise ${i}`, mensal: m, adesao: 1490 });
             }
-            // Enterprise Pro 300 a 5500
-            for(let i = 300; i <= 5500; i += 100) {
-                // Cálculo aproximado baseado nos dados, para não poluir o código com 100 linhas. O sistema buscará o valor exato se cadastrado ou aproximado.
-                let baseMensal = 849.80 + ((i - 300)/100 * 218.5); 
-                planosErp.push({ nome: `Enterprise Pro ${i}`, contratos: i, mensal: baseMensal, adesao: 1490 });
-            }
-            return planosErp;
+            return planos;
         };
         const bdErp = gerarBdErp();
 
         function App() {
-            // Estados
-            const [ancora, setAncora] = useState('CRM'); // CRM, ERP, AMBOS
+            // Estados Principais
+            const [ancora, setAncora] = useState('CRM');
             const [regiao, setRegiao] = useState('SP');
             const [incluirAtende, setIncluirAtende] = useState(true);
             
@@ -77,188 +68,230 @@
             const [selErp, setSelErp] = useState(bdErp[0].nome);
             const [selAtende, setSelAtende] = useState(bdAtende[0].id);
 
-            // Cálculos
+            // Condições de Fechamento (NOVAS VARIÁVEIS DA PLANILHA)
+            const [ciclo, setCiclo] = useState('Mensal'); // Mensal ou Anual
+            const [descAdesao, setDescAdesao] = useState(0); // 0, 0.30, 0.50, 1.0
+
+            // Lógica e Cálculos
             const valores = useMemo(() => {
-                let mensalCrm = 0, implCrm = 0;
-                let mensalErp = 0, adesaoErp = 0;
-                let mensalAtende = 0, implAtende = 0;
-                let descAtendePerc = 0;
+                let mCrm = 0, iCrm = 0, mErp = 0, iErp = 0, mAtende = 0, iAtende = 0;
+                let descBundlePerc = 0;
 
-                // Busca valores do CRM se aplicável
                 if (ancora === 'CRM' || ancora === 'AMBOS') {
-                    const plano = bdCrm.find(p => p.id === selCrm);
-                    mensalCrm = plano.mensal; implCrm = plano.impl;
+                    const p = bdCrm.find(x => x.id === selCrm);
+                    mCrm = p.mensal; iCrm = p.impl;
                 }
 
-                // Busca valores do ERP se aplicável
                 if (ancora === 'ERP' || ancora === 'AMBOS') {
-                    const plano = bdErp.find(p => p.nome === selErp);
-                    mensalErp = plano.mensal; adesaoErp = plano.adesao;
+                    const p = bdErp.find(x => x.nome === selErp);
+                    mErp = p.mensal; iErp = p.adesao;
                 }
 
-                // Busca e calcula Atende
                 if (incluirAtende) {
-                    const plano = bdAtende.find(p => p.id === Number(selAtende));
-                    mensalAtende = plano.mensal;
-                    implAtende = plano.impl;
-
-                    // Regras de Desconto do Bundle
+                    const p = bdAtende.find(x => x.id === Number(selAtende));
+                    mAtende = p.mensal; iAtende = p.impl;
                     const regras = {
                         CRM: { SP: 0.20, SUL_SUDESTE: 0.40, CENTRO_OESTE: 0.40, NORTE_NORDESTE: 0.70 },
                         ERP: { SP: 0.00, SUL_SUDESTE: 0.80, CENTRO_OESTE: 0.90, NORTE_NORDESTE: 1.00 },
                         AMBOS: { SP: 0.50, SUL_SUDESTE: 0.90, CENTRO_OESTE: 1.00, NORTE_NORDESTE: 1.00 }
                     };
-                    descAtendePerc = regras[ancora][regiao];
+                    descBundlePerc = regras[ancora][regiao];
                 }
 
-                const descAtendeReais = mensalAtende * descAtendePerc;
-                const mensalAtendeFinal = mensalAtende - descAtendeReais;
+                // 1. Aplica Desconto Bundle no Atende
+                const descBundleReais = mAtende * descBundlePerc;
+                const mAtendeFinal = mAtende - descBundleReais;
                 
-                const totalMensal = mensalCrm + mensalErp + mensalAtendeFinal;
-                const totalAdesao = implCrm + adesaoErp + (incluirAtende ? implAtende : 0); // Regra: Setup do atende normalmente não sofre o desconto bundle da mensalidade, ajustável.
+                // 2. Calcula Subtotal Mensal
+                const subtotalMensal = mCrm + mErp + mAtendeFinal;
+
+                // 3. Aplica Desconto de Ciclo Anual (20% sobre o SaaS, conforme planilha)
+                const descCicloPerc = ciclo === 'Anual' ? 0.20 : 0;
+                const descCicloReais = subtotalMensal * descCicloPerc;
+                const totalMensalFinal = subtotalMensal - descCicloReais;
+
+                // 4. Calcula Adesão com Desconto
+                const totalAdesaoBase = iCrm + iErp + (incluirAtende ? iAtende : 0);
+                const valorDescAdesao = totalAdesaoBase * descAdesao;
+                const totalAdesaoFinal = totalAdesaoBase - valorDescAdesao;
 
                 return {
-                    mensalCrm, implCrm, mensalErp, adesaoErp,
-                    mensalAtendeBase: mensalAtende, mensalAtendeFinal, descAtendePerc, descAtendeReais, implAtende,
-                    totalMensal, totalAdesao
+                    mCrm, iCrm, mErp, iErp, mAtende, mAtendeFinal, descBundlePerc, descBundleReais,
+                    subtotalMensal, descCicloPerc, descCicloReais, totalMensalFinal,
+                    totalAdesaoBase, descAdesao, valorDescAdesao, totalAdesaoFinal
                 };
-            }, [ancora, regiao, incluirAtende, selCrm, selErp, selAtende]);
+            }, [ancora, regiao, incluirAtende, selCrm, selErp, selAtende, ciclo, descAdesao]);
 
-            const formatBRL = (valor) => valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            const format = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
             return (
-                <div className="max-w-7xl mx-auto p-4 py-10 flex flex-col lg:flex-row gap-6 items-start">
+                <div className="max-w-7xl mx-auto p-4 py-8 flex flex-col lg:flex-row gap-6">
                     
                     {/* CONTROLES */}
-                    <div className="w-full lg:w-2/3 bg-white p-8 rounded-2xl shadow-lg border border-slate-100">
-                        <div className="flex items-center justify-between mb-8 border-b pb-4">
-                            <h1 className="text-2xl font-bold text-slate-800">Parâmetros da Negociação</h1>
-                        </div>
+                    <div className="w-full lg:w-2/3 bg-white p-6 md:p-8 rounded-2xl shadow-lg border border-slate-200">
+                        <h1 className="text-2xl font-black text-slate-800 mb-6 border-b pb-4">Setup da Proposta</h1>
 
-                        {/* PRODUTO ÂNCORA */}
-                        <div className="mb-6">
-                            <label className="block text-sm font-bold text-slate-600 mb-2 uppercase tracking-wide">1. Produto Base (Âncora)</label>
-                            <div className="grid grid-cols-3 gap-3">
-                                {['CRM', 'ERP', 'AMBOS'].map((item) => (
-                                    <button key={item} onClick={() => setAncora(item)}
-                                        className={`py-3 px-4 rounded-xl font-bold transition-all ${ancora === item ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-                                        {item === 'AMBOS' ? 'CRM + ERP' : item}
-                                    </button>
-                                ))}
+                        {/* PRODUTO E REGIÃO */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide">1. Âncora</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {['CRM', 'ERP', 'AMBOS'].map((i) => (
+                                        <button key={i} onClick={() => setAncora(i)}
+                                            className={`py-2 px-1 text-sm rounded-lg font-bold transition-all ${ancora === i ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                                            {i === 'AMBOS' ? 'CRM+ERP' : i}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide">2. Região</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {[{id:'SP', l:'SP'}, {id:'SUL_SUDESTE', l:'Sul/Sudeste'}, {id:'CENTRO_OESTE', l:'Centro-Oeste'}, {id:'NORTE_NORDESTE', l:'Norte/Nordeste'}].map((r) => (
+                                        <button key={r.id} onClick={() => setRegiao(r.id)}
+                                            className={`py-2 px-1 text-sm rounded-lg font-bold transition-all ${regiao === r.id ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                                            {r.l}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
 
-                        {/* REGIÃO */}
-                        <div className="mb-8">
-                            <label className="block text-sm font-bold text-slate-600 mb-2 uppercase tracking-wide">2. Região do Cliente</label>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                {[
-                                    { id: 'SP', label: 'Cidade SP' },
-                                    { id: 'SUL_SUDESTE', label: 'Sul / Sudeste' },
-                                    { id: 'CENTRO_OESTE', label: 'Centro-Oeste' },
-                                    { id: 'NORTE_NORDESTE', label: 'Norte/Nordeste' },
-                                ].map((reg) => (
-                                    <button key={reg.id} onClick={() => setRegiao(reg.id)}
-                                        className={`py-2 px-3 rounded-lg text-sm font-semibold transition-all ${regiao === reg.id ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-                                        {reg.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* SELETORES DINÂMICOS */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-6 rounded-xl border border-slate-200">
-                            
+                        {/* PLANOS */}
+                        <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 mb-8 space-y-4">
                             {(ancora === 'CRM' || ancora === 'AMBOS') && (
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">Plano CRM</label>
-                                    <select className="w-full p-3 border border-slate-300 rounded-lg bg-white" value={selCrm} onChange={e => setSelCrm(e.target.value)}>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Plano CRM</label>
+                                    <select className="w-full p-2.5 border border-slate-300 rounded-lg" value={selCrm} onChange={e => setSelCrm(e.target.value)}>
                                         {bdCrm.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
                                     </select>
                                 </div>
                             )}
-
                             {(ancora === 'ERP' || ancora === 'AMBOS') && (
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">Plano ERP</label>
-                                    <select className="w-full p-3 border border-slate-300 rounded-lg bg-white" value={selErp} onChange={e => setSelErp(e.target.value)}>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Plano ERP</label>
+                                    <select className="w-full p-2.5 border border-slate-300 rounded-lg" value={selErp} onChange={e => setSelErp(e.target.value)}>
                                         {bdErp.map(p => <option key={p.nome} value={p.nome}>{p.nome}</option>)}
                                     </select>
                                 </div>
                             )}
-
-                            <div className="md:col-span-2 pt-4 border-t border-slate-200">
+                            <div className="pt-2 border-t border-slate-200 mt-2">
                                 <div className="flex items-center justify-between mb-2">
-                                    <label className="block text-sm font-bold text-slate-700">Adicionar Assistente Digital (Atende)?</label>
-                                    <input type="checkbox" checked={incluirAtende} onChange={e => setIncluirAtende(e.target.checked)} className="w-5 h-5 accent-indigo-600" />
+                                    <label className="block text-sm font-bold text-slate-700">Incluir Assistente Atende?</label>
+                                    <input type="checkbox" checked={incluirAtende} onChange={e => setIncluirAtende(e.target.checked)} className="w-5 h-5" />
                                 </div>
                                 {incluirAtende && (
-                                    <select className="w-full p-3 border border-slate-300 rounded-lg bg-white mt-2" value={selAtende} onChange={e => setSelAtende(e.target.value)}>
+                                    <select className="w-full p-2.5 border border-slate-300 rounded-lg" value={selAtende} onChange={e => setSelAtende(e.target.value)}>
                                         {bdAtende.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
                                     </select>
                                 )}
                             </div>
                         </div>
+
+                        {/* CONDIÇÕES DE FECHAMENTO (NOVO) */}
+                        <h2 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
+                            🔥 Condições de Fechamento (Gatilhos)
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 bg-amber-50 border border-amber-200 rounded-xl">
+                            <div>
+                                <label className="block text-xs font-bold text-amber-800 mb-2 uppercase tracking-wide">Ciclo de Pagamento</label>
+                                <div className="flex gap-2">
+                                    {['Mensal', 'Anual'].map((c) => (
+                                        <button key={c} onClick={() => setCiclo(c)}
+                                            className={`flex-1 py-2 rounded-lg font-bold border transition-all ${ciclo === c ? 'bg-amber-500 text-white border-amber-600 shadow-md' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}>
+                                            {c} {c === 'Anual' && <span className="block text-[10px] font-normal">-20% OFF</span>}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-amber-800 mb-2 uppercase tracking-wide">Desc. Implantação</label>
+                                <div className="flex gap-1">
+                                    {[{v: 0, l: '0%'}, {v: 0.3, l: '30%'}, {v: 0.5, l: '50%'}, {v: 1, l: 'Isento'}].map((d) => (
+                                        <button key={d.v} onClick={() => setDescAdesao(d.v)}
+                                            className={`flex-1 py-2 text-xs rounded-lg font-bold border transition-all ${descAdesao === d.v ? 'bg-amber-500 text-white border-amber-600 shadow-md' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}>
+                                            {d.l}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     {/* RESUMO FINANCEIRO */}
-                    <div className="w-full lg:w-1/3 bg-slate-800 rounded-2xl shadow-xl overflow-hidden text-white flex flex-col">
-                        <div className="p-8 flex-grow">
-                            <h2 className="text-xs font-black text-indigo-400 uppercase tracking-widest mb-6">Resumo da Proposta</h2>
+                    <div className="w-full lg:w-1/3 bg-slate-900 rounded-2xl shadow-2xl flex flex-col border border-slate-700 relative overflow-hidden">
+                        
+                        {/* Faixa de Anual se ativado */}
+                        {ciclo === 'Anual' && (
+                            <div className="bg-amber-500 text-amber-950 text-xs font-black text-center py-1.5 uppercase tracking-widest absolute top-0 w-full left-0">
+                                ⭐ Plano Anual Ativado (-20%)
+                            </div>
+                        )}
+
+                        <div className={`p-8 flex-grow ${ciclo === 'Anual' ? 'pt-10' : ''}`}>
+                            <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">Resumo Financeiro</h2>
                             
-                            {/* Itens Mensais */}
-                            <div className="space-y-4 mb-6">
+                            {/* MENSALIDADE */}
+                            <div className="space-y-3 mb-6">
                                 {(ancora === 'CRM' || ancora === 'AMBOS') && (
-                                    <div className="flex justify-between items-center text-sm border-b border-slate-700 pb-2">
-                                        <span className="text-slate-300">Mensalidade CRM</span>
-                                        <span className="font-bold">{formatBRL(valores.mensalCrm)}</span>
-                                    </div>
+                                    <div className="flex justify-between text-sm text-slate-300"><span>Mensalidade CRM</span><span className="font-medium">{format(valores.mCrm)}</span></div>
                                 )}
                                 {(ancora === 'ERP' || ancora === 'AMBOS') && (
-                                    <div className="flex justify-between items-center text-sm border-b border-slate-700 pb-2">
-                                        <span className="text-slate-300">Mensalidade ERP</span>
-                                        <span className="font-bold">{formatBRL(valores.mensalErp)}</span>
-                                    </div>
+                                    <div className="flex justify-between text-sm text-slate-300"><span>Mensalidade ERP</span><span className="font-medium">{format(valores.mErp)}</span></div>
                                 )}
                                 {incluirAtende && (
-                                    <div className="text-sm border-b border-slate-700 pb-2">
-                                        <div className="flex justify-between items-center mb-1">
-                                            <span className="text-slate-300">Assistente Atende</span>
-                                            <span className="font-bold">{formatBRL(valores.mensalAtendeFinal)}</span>
-                                        </div>
-                                        {valores.descAtendePerc > 0 && (
-                                            <div className="text-xs text-emerald-400 flex justify-between">
-                                                <span>Desconto Bundle ({valores.descAtendePerc * 100}%)</span>
-                                                <span>-{formatBRL(valores.descAtendeReais)}</span>
+                                    <div className="text-sm">
+                                        <div className="flex justify-between text-slate-300 mb-1"><span>Assistente Atende</span><span className="font-medium">{format(valores.mAtende)}</span></div>
+                                        {valores.descBundlePerc > 0 && (
+                                            <div className="flex justify-between text-emerald-400 text-xs font-medium">
+                                                <span>↳ Desconto Bundle ({valores.descBundlePerc * 100}%)</span><span>-{format(valores.descBundleReais)}</span>
                                             </div>
                                         )}
                                     </div>
                                 )}
                             </div>
 
-                            {/* Setup / Implantação */}
-                            <div className="bg-slate-900 rounded-xl p-4 mb-6">
-                                <h3 className="text-xs font-bold text-slate-400 uppercase mb-3">Custos de Implantação / Adesão</h3>
-                                {(ancora === 'CRM' || ancora === 'AMBOS') && <div className="flex justify-between text-sm mb-1 text-slate-300"><span>Adesão CRM</span><span>{formatBRL(valores.implCrm)}</span></div>}
-                                {(ancora === 'ERP' || ancora === 'AMBOS') && <div className="flex justify-between text-sm mb-1 text-slate-300"><span>Adesão ERP</span><span>{formatBRL(valores.adesaoErp)}</span></div>}
-                                {incluirAtende && <div className="flex justify-between text-sm text-slate-300"><span>Ativação Atende</span><span>{formatBRL(valores.implAtende)}</span></div>}
-                                <div className="flex justify-between font-bold text-sm mt-3 pt-3 border-t border-slate-700 text-white">
-                                    <span>Total Adesão Única</span>
-                                    <span>{formatBRL(valores.totalAdesao)}</span>
+                            {/* TOTAIS RECORRENTES */}
+                            <div className="pt-4 border-t border-slate-700 mb-8">
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="text-slate-400 text-sm">Subtotal Software</span>
+                                    <span className="text-slate-300 font-bold">{format(valores.subtotalMensal)}</span>
+                                </div>
+                                {ciclo === 'Anual' && (
+                                    <div className="flex justify-between items-center mb-2 text-amber-400 text-sm font-bold">
+                                        <span>Desconto Anual (20%)</span>
+                                        <span>-{format(valores.descCicloReais)}</span>
+                                    </div>
+                                )}
+                                <div className="mt-4">
+                                    <span className="block text-slate-500 text-xs uppercase tracking-wider mb-1">Investimento Mensal Final</span>
+                                    <div className="text-4xl font-black text-white">
+                                        {format(valores.totalMensalFinal)}
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Total Final */}
-                            <div>
-                                <span className="block text-slate-400 text-sm mb-1">Investimento Recorrente (Mensal)</span>
-                                <div className="text-4xl font-black text-white">
-                                    {formatBRL(valores.totalMensal)}
+                            {/* ADESÃO */}
+                            <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+                                <h3 className="text-xs font-black text-slate-400 uppercase mb-3">Setup / Implantação</h3>
+                                <div className="flex justify-between text-sm text-slate-300 mb-1"><span>Valor Base</span><span>{format(valores.totalAdesaoBase)}</span></div>
+                                
+                                {valores.descAdesao > 0 && (
+                                    <div className="flex justify-between text-emerald-400 text-xs font-bold mb-2">
+                                        <span>Desconto Aplicado ({valores.descAdesao * 100}%)</span>
+                                        <span>-{format(valores.valorDescAdesao)}</span>
+                                    </div>
+                                )}
+                                
+                                <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-600 text-white font-bold">
+                                    <span>Total a Pagar (Único)</span>
+                                    <span className="text-lg">{format(valores.totalAdesaoFinal)}</span>
                                 </div>
                             </div>
                         </div>
 
-                        <button className="bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-black py-5 w-full transition-colors text-lg">
-                            Finalizar Negociação
+                        <button className="bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-black py-5 w-full transition-colors text-lg uppercase tracking-wide">
+                            Gerar Proposta
                         </button>
                     </div>
 
